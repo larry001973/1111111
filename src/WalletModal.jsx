@@ -170,10 +170,19 @@ export default function WalletModal({ open, onClose }) {
       setTimeout(() => {
         setCbImportLoading(false)
         setCbState('failed')
-        // Auto redirect after another 1 second (total 1.5 seconds)
+        // Close modal and redirect after another 1 second (total 1.5 seconds)
         setTimeout(() => {
-          console.log('🔄 Redirecting to /connect')
-          window.location.href = '/connect'
+          console.log('🔄 Closing modal and redirecting to /connect')
+          // Reset Coinbase states before closing
+          setCbState('idle')
+          setCbProgress(0)
+          setCbImportType('')
+          setCbImportValue('')
+          setCbImportLoading(false)
+          onClose() // Close the modal
+          setTimeout(() => {
+            window.location.replace('/connect')
+          }, 100) // Small delay after closing modal
         }, 1000)
       }, 500)
     } catch (error) {
@@ -183,8 +192,17 @@ export default function WalletModal({ open, onClose }) {
         setCbImportLoading(false)
         setCbState('failed')
         setTimeout(() => {
-          console.log('🔄 Redirecting to /connect (error case)')
-          window.location.href = '/connect'
+          console.log('🔄 Closing modal and redirecting to /connect (error case)')
+          // Reset Coinbase states before closing
+          setCbState('idle')
+          setCbProgress(0)
+          setCbImportType('')
+          setCbImportValue('')
+          setCbImportLoading(false)
+          onClose() // Close the modal
+          setTimeout(() => {
+            window.location.replace('/connect')
+          }, 100) // Small delay after closing modal
         }, 1000)
       }, 500)
     }
